@@ -15,7 +15,7 @@
 """Methods to allow tket circuits to be ran on the QuEST simulator
 """
 
-from typing import List, Sequence, Optional, Type, Union
+from typing import List, Sequence, Optional, Type, Union, Any
 from logging import warning
 from uuid import uuid4
 import numpy as np
@@ -217,3 +217,9 @@ class QuESTBackend(Backend):
         if handle in self._cache:
             return CircuitStatus(StatusEnum.COMPLETED)
         raise CircuitNotRunError(handle)
+
+    def prob_of_all_outcomes(self, circuit: Circuit, qubits: List[int]) -> Any:
+        quest_state = self._sim(circuit.n_qubits)
+        quest_circ = tk_to_quest(circuit)
+        quest_state.apply_circuit(quest_circ)
+        return quest_state.prob_of_all_outcomes(qubits)

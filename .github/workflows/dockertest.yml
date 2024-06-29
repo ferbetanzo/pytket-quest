@@ -1,0 +1,29 @@
+name: Docker
+
+on:
+  workflow_call:
+
+jobs:
+  # Run tests.
+  # See also https://docs.docker.com/docker-hub/builds/automated-testing/
+  test:
+    name: Test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Checkout submodules
+        run: git submodule update --init --recursive
+      - name: Build pytketquest Docker image
+        run: docker build -t pytketquest -f Dockerfile .
+      - name: Build Docker image supporting distributed calculations and run containers
+        run: |
+          cd tests/distributed
+          ./run-docker-compose.sh -n 4
+      - name: Run distributed calculations
+        run: |
+          cd tests/distributed
+          ./run-mpirun.sh

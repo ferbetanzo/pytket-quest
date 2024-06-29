@@ -1,0 +1,12 @@
+services:
+  mpi_node:
+    image: pytketquest-distributed-test
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    networks:
+      - mpi-network
+
+networks:
+  mpi-network:
+    driver: bridge

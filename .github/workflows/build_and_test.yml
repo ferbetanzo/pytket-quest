@@ -6,7 +6,6 @@ on:
       - main
   push:
     branches:
-      - PQ-*
       - main
       - 'wheel/**'
       - 'runci/**'
@@ -14,6 +13,9 @@ on:
     types:
       - created
       - edited
+  schedule:
+    # 04:00 every Tuesday morning
+    - cron: '0 4 * * 2'
 
 jobs:
   quest-checks:
@@ -28,12 +30,12 @@ jobs:
         fetch-depth: '0'
     - run: git fetch --depth=1 origin +refs/tags/*:refs/tags/* +refs/heads/*:refs/remotes/origin/*
     - name: Set up Python 3.10
-      if: github.event_name == 'push'
+      if: github.event_name == 'push' || github.event_name == 'schedule'
       uses: actions/setup-python@v5
       with:
         python-version: '3.10'
     - name: Build and test (3.10)
-      if: github.event_name == 'push'
+      if: github.event_name == 'push' || github.event_name == 'schedule'
       shell: bash
       run: |
         ./.github/workflows/build-test nomypy
@@ -42,12 +44,12 @@ jobs:
       with:
         python-version: '3.11'
     - name: Build and test including remote checks (3.11) mypy
-      if:  (matrix.os == 'macos-12') && (github.event_name == 'push' || (github.event_name == 'pull_request' &&  github.event.pull_request.head.repo.full_name == github.repository) || github.event_name == 'release')
+      if:  (matrix.os == 'macos-12') && (github.event_name == 'push' || (github.event_name == 'pull_request' &&  github.event.pull_request.head.repo.full_name == github.repository) || github.event_name == 'release' || github.event_name == 'schedule')
       shell: bash
       run: |
         ./.github/workflows/build-test mypy
     - name: Build and test including remote checks (3.11) nomypy
-      if:  (matrix.os != 'macos-12') && (github.event_name == 'push' || (github.event_name == 'pull_request' &&  github.event.pull_request.head.repo.full_name == github.repository) || github.event_name == 'release')
+      if:  (matrix.os != 'macos-12') && (github.event_name == 'push' || (github.event_name == 'pull_request' &&  github.event.pull_request.head.repo.full_name == github.repository) || github.event_name == 'release' || github.event_name == 'schedule')
       shell: bash
       run: |
         ./.github/workflows/build-test nomypy
@@ -66,10 +68,15 @@ jobs:
       run: |
         ./.github/workflows/docs/check-build-docs
 
+  distributed_tests:
+    name: Run distributed calculations
+    needs: quest-checks
+    uses: ./.github/workflows/dockertest.yml
+
   publish_to_pypi:
     name: Publish to pypi
     if: github.event_name == 'release'
-    needs: quest-checks
+    needs: distributed_tests
     runs-on: ubuntu-22.04
     steps:
     - name: Download all wheels
